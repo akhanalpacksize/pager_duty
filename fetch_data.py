@@ -2,9 +2,11 @@ import concurrent
 import calendar
 import logging
 import os
+import time
 
 import requests
 import pandas as pd
+
 from config.env import *
 from commons import INCIDENTS_LIST, output_dir, incident_file, log_file
 from json_to_csv import json_to_dataframe
@@ -97,17 +99,29 @@ def fetch_monthly_incidents():
 
 def fetch_log_for_id(id, headers):
     incident_url = f'https://api.pagerduty.com/incidents/{id}/log_entries'
-    response = requests.get(incident_url, headers=headers)
-    try:
-        response.raise_for_status()
-        response_json = response.json()
-        return response_json.get('log_entries', [])
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching log entries for incident ID {id}: {e}")
-    except ValueError as ve:
-        logger.error(f"Error parsing JSON response for incident ID {id}: {ve}")
-    except Exception as ex:
-        logger.error(f"An unexpected error occurred for incident ID {id}: {ex}")
+    retries = 3
+    for attempt in range(retries):
+        try:
+            response = requests.get(incident_url, headers=headers)
+            response.raise_for_status()
+            response_json = response.json()
+            return response_json.get('log_entries', [])
+        except requests.HTTPError as e:
+            if response.status_code == 429:
+                if attempt < retries - 1:
+                    retry_after = int(response.headers.get('ratelimit-reset', 1))
+                    time.sleep(retry_after)
+                    continue
+            raise e
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching log entries for incident ID {id}: {e}")
+            return []
+        except ValueError as ve:
+            logger.error(f"Error parsing JSON response for incident ID {id}: {ve}")
+            return []
+        except Exception as ex:
+            logger.error(f"An unexpected error occurred for incident ID {id}: {ex}")
+            return []
     return []
 
 
@@ -124,7 +138,7 @@ def fetch_log():
         'Authorization': f'Token token={access_token}'
     }
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_id = {executor.submit(fetch_log_for_id, id, headers): id for id in incident_ids}
         for future in concurrent.futures.as_completed(future_to_id):
             id = future_to_id[future]
