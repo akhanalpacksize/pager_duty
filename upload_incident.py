@@ -28,18 +28,11 @@ def generate_schema_columns(header):
     updated_schema_column = []
 
     for elem in header:
-        if elem in ["dataset_a_records", "dataset_a_cols", "dataset_b_records", "dataset_b_cols", 'dataset_a_cards',
-                    'dataset_b_cards', 'dataset_a_dataset_card_ii', 'dataset_a_dataset_di', 'dataset_a_dataset_ii',
-                    'dataset_a_dataflow_di', 'dataset_a_dataflow_ii', 'dataset_b_dataset_card_ii',
-                    'dataset_b_dataset_di', 'dataset_b_dataset_ii', 'dataset_b_dataflow_di', 'dataset_b_dataflow_ii',
-                    "matching_cols", "impact_score"]:
+        if elem in ['incident_number']:
             column_type = "long"
         elif elem == 'similarity_index':
             column_type = "decimal"
-        elif elem in ["dataset_a_id", "dataset_a_name", "dataset_a_type", "dataset_a_owned_by", "dataset_b_id",
-                      "dataset_b_name", "dataset_b_type", "dataset_b_owned_by"]:
-            column_type = "string"
-        elif elem == 'dataset_a_last_run' or elem == 'dataset_b_last_run':
+        elif elem == 'created_at' or elem == 'updated_at' or elem == 'last_status_change_at'  or elem == 'resolved_at'or elem == 'last_status_change_by_deleted_at':
             column_type = "datetime"
         else:
             column_type = "string"
