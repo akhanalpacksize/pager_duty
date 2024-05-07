@@ -71,7 +71,6 @@ def fetch_monthly_incidents():
                 more = True
                 params['offset'] += params.get('limit')
             # Move to the next month
-            logger.info("has more: ", more)
             logger.info(f"Incidents fetched: {len(all_incidents)} with status code {response.status_code}")
 
 
