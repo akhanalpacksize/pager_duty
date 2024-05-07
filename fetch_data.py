@@ -2,6 +2,7 @@ import concurrent
 import calendar
 import logging
 import os
+import sys
 import time
 
 import requests
@@ -13,6 +14,7 @@ from json_to_csv import json_to_dataframe
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from logger_config import setup_logging
+from utils import send_email_error
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -75,12 +77,18 @@ def fetch_monthly_incidents():
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching incidents: {e}")
+            error_message = f"Error fetching incidents: {e}"
+            send_email_error(error_message)
             break
         except ValueError as ve:
             logger.error(f"Error parsing JSON response: {ve}")
+            error_message = f"Error parsing JSON response: {ve}"
+            send_email_error(error_message)
             break
         except Exception as ex:
             logger.error(f"An unexpected error occurred: {ex}")
+            error_message = f"An unexpected error occurred: {ex}"
+            send_email_error(error_message)
             break
 
     # Convert to DataFrame and save to CSV
@@ -93,7 +101,7 @@ def fetch_monthly_incidents():
     csv_file_path = os.path.join(output_dir, incident_file)
     flatten_json.to_csv(csv_file_path, index=False)
 
-    logger.error(f"Total number of incidents fetched: {len(all_incidents)}")
+    logger.info(f"Total number of incidents fetched: {len(all_incidents)}")
     return flatten_json
 
 
@@ -106,22 +114,16 @@ def fetch_log_for_id(id, headers):
             response.raise_for_status()
             response_json = response.json()
             return response_json.get('log_entries', [])
-        except requests.HTTPError as e:
+        except Exception as ex:
+            logger.error(f"An unexpected error occurred for incident ID {id}: {ex}")
+            error_message = f"An unexpected error occurred {id}: {ex}"
+            send_email_error(error_message)
             if response.status_code == 429:
                 if attempt < retries - 1:
                     retry_after = int(response.headers.get('ratelimit-reset', 1))
                     time.sleep(retry_after)
                     continue
-            raise e
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching log entries for incident ID {id}: {e}")
-            return []
-        except ValueError as ve:
-            logger.error(f"Error parsing JSON response for incident ID {id}: {ve}")
-            return []
-        except Exception as ex:
-            logger.error(f"An unexpected error occurred for incident ID {id}: {ex}")
-            return []
+            raise ex
     return []
 
 
@@ -148,6 +150,11 @@ def fetch_log():
                 logger.info(f"Log entries fetched for incident ID {id}")
             except Exception as e:
                 logger.error(f"An error occurred for incident ID {id}: {e}")
+                error_message = f"An error occurred for incident {id}: {e}"
+                send_email_error(error_message)
+                executor.shutdown(wait=False, cancel_futures=True)
+                print("EXIT")
+                sys.exit(0)
 
     flatten_json = json_to_dataframe(all_logs)
 
