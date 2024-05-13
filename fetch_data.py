@@ -148,7 +148,7 @@ def fetch_log():
         'Authorization': f'Token token={access_token}'
     }
 
-    with ThreadPoolExecutor(max_workers=150) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         future_to_id = {executor.submit(fetch_log_for_id, id, headers): id for id in incident_ids}
         for future in concurrent.futures.as_completed(future_to_id):
             id = future_to_id[future]
