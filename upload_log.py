@@ -61,10 +61,9 @@ def update_schema(name, updated_schema_column, token):
         logger.info(f"updated_schema '{name}' with ID {Log}")
     else:
         error_message = f"Failed to upload dataset '{name}' with status code {response.status_code}"
-        # send_email_error(error_message)
+        send_email_error(error_message)
         logger.error(f"Failed to upload dataset '{name}' with status code {response.status_code}")
         response.raise_for_status()
-
 
 def generate_update_schema_log():
     access_token = get_access_token()

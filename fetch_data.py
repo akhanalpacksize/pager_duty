@@ -109,19 +109,28 @@ def fetch_log_for_id(id, headers):
     retries = 3
     for attempt in range(retries):
         try:
-            response = requests.get(incident_url, headers=headers)
+            response = requests.get(incident_url, headers=headers, timeout=10)
             response.raise_for_status()
             response_json = response.json()
             return response_json.get('log_entries', [])
-        except Exception as ex:
-            logger.error(f"An unexpected error occurred for incident ID {id}: {ex}")
-            error_message = f"An unexpected error occurred {id}: {ex}"
-            send_email_error(error_message)
-            if response.status_code == 429:
-                if attempt < retries - 1:
-                    retry_after = int(response.headers.get('ratelimit-reset', 1))
-                    time.sleep(retry_after)
+        except (requests.exceptions.HTTPError, requests.exceptions.Timeout) as err:
+            if isinstance(err, requests.exceptions.HTTPError):
+                http_err = err
+                if http_err.response.status_code == 429:
+                    if attempt <= retries - 1:
+                        retry_after = int(http_err.response.headers.get('ratelimit-reset', 1))
+                        print("Rate limited, retrying...", retry_after, "for id", id)
+                        time.sleep(retry_after)
+                        continue
+            elif isinstance(err, requests.exceptions.Timeout):
+                timeout_err = err
+                if attempt <= retries - 1:
+                    time.sleep(5)
+                    logger.error(f"Timeout {timeout_err} for id {id}")
                     continue
+
+        except Exception as ex:
+
             raise ex
     return []
 
@@ -139,7 +148,7 @@ def fetch_log():
         'Authorization': f'Token token={access_token}'
     }
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=150) as executor:
         future_to_id = {executor.submit(fetch_log_for_id, id, headers): id for id in incident_ids}
         for future in concurrent.futures.as_completed(future_to_id):
             id = future_to_id[future]
