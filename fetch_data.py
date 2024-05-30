@@ -106,7 +106,7 @@ def fetch_monthly_incidents():
 
 def fetch_log_for_id(id, headers):
     incident_url = f'https://api.pagerduty.com/incidents/{id}/log_entries'
-    retries = 3
+    retries = 5
     for attempt in range(retries):
         try:
             response = requests.get(incident_url, headers=headers, timeout=10)

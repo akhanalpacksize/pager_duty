@@ -14,3 +14,7 @@ DATASET_OWNER_ID = 1339070962
 DATA_SET_OWNER_NAME = "Info Sys"
 
 CHUNK_SIZE = 10000
+
+
+log_csv_dir='log_csv_dir'
+log_csv = 'log_csv.csv'
