@@ -74,7 +74,7 @@ def generate_update_schema():
 
     updated_schema_column = generate_schema_columns(headers)
 
-    dataset_name = "Pager Duty"
+    dataset_name = "Log Script"
     try:
         # UPDATE DATASET FOR DOMO
         update_schema(dataset_name, updated_schema_column, access_token)
