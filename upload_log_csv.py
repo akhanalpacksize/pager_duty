@@ -103,7 +103,7 @@ def upload_csv():
         }
         try:
             # Upload CSV to dataset
-            response = requests.put(f'{BASE_URL}/datasets/{DATASET_LOG}/data', headers=header, data=csv_data)
+            response = requests.put(f'{BASE_URL}/datasets/{DATASET_LOG}/data?updateMethod=APPEND', headers=header, data=csv_data)
 
             # Check the API status
             if response.status_code == 204:
